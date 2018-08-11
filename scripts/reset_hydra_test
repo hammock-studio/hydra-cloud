@@ -29,9 +29,9 @@ run_hydra_container () {
     -p 9000:4444 \
     -e SYSTEM_SECRET=$SYSTEM_SECRET \
     -e DATABASE_URL=$DATABASE_URL \
-    -e OAUTH2_ISSUER_URL=https://localhost:9000/ \
-    -e OAUTH2_CONSENT_URL=http://localhost:9020/consent \
-    -e OAUTH2_LOGIN_URL=http://localhost:9020/login \
+    -e OAUTH2_ISSUER_URL=https://$EXTERNAL_IP:9000/ \
+    -e OAUTH2_CONSENT_URL=http://$EXTERNAL_IP:9020/consent \
+    -e OAUTH2_LOGIN_URL=http://$EXTERNAL_IP:9020/login \
     oryd/hydra:v1.0.0-beta.5 serve
 }
 
@@ -56,7 +56,7 @@ hydra_create_consent_client () {
       --grant-types authorization_code,refresh_token,client_credentials,implicit \
       --response-types token,code,id_token \
       --scope openid,offline,photos.read \
-      --callbacks http://127.0.0.1:9010/callback
+      --callbacks http://$EXTERNAL_IP:9010/callback,http://127.0.0.1:9010/callback
 }
 
 hydra_run_client_app () {
@@ -66,7 +66,7 @@ hydra_run_client_app () {
     oryd/hydra:v1.0.0-beta.5 \
     token user --skip-tls-verify \
       --port 9010 \
-      --auth-url https://localhost:9000/oauth2/auth \
+      --auth-url https://$EXTERNAL_IP:9000/oauth2/auth \
       --token-url https://ory-hydra:4444/oauth2/token \
       --client-id facebook-photo-backup \
       --client-secret some-secret \
@@ -91,5 +91,6 @@ reset () {
 
 export DATABASE_URL=postgres://hydra:secret@ory-postgres:5432/hydra?sslmode=disable
 export SYSTEM_SECRET=$(export LC_CTYPE=C; cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+export EXTERNAL_IP=$(curl ipinfo.io/ip)
 
 reset
