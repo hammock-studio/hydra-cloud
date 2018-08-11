@@ -56,7 +56,7 @@ hydra_create_consent_client () {
       --grant-types authorization_code,refresh_token,client_credentials,implicit \
       --response-types token,code,id_token \
       --scope openid,offline,photos.read \
-      --callbacks http://$EXTERNAL_IP:9010/callback
+      --callbacks http://$EXTERNAL_IP:9010/callback,http://127.0.0.1:9010/callback
 }
 
 hydra_run_client_app () {
