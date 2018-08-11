@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# install docker and create hydra network
+# docker network create hydranet
+# pull hydra latest image
