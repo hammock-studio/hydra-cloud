@@ -30,8 +30,8 @@ run_hydra_container () {
     -e SYSTEM_SECRET=$SYSTEM_SECRET \
     -e DATABASE_URL=$DATABASE_URL \
     -e OAUTH2_ISSUER_URL=https://$EXTERNAL_IP:9000/ \
-    -e OAUTH2_CONSENT_URL=http://localhost:3000/callback/consent \
-    -e OAUTH2_LOGIN_URL=http://localhost:3000/callback/login \
+    -e OAUTH2_CONSENT_URL=http://localhost:3000/consent \
+    -e OAUTH2_LOGIN_URL=http://localhost:3000/login \
     -e FORCE_ROOT_CLIENT_CREDENTIALS=admin:demo-password \
     oryd/hydra:v1.0.0-beta.5 serve
 }

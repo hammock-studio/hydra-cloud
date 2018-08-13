@@ -46,7 +46,7 @@ register_hydra_dashboard_client () {
       --secret hydra-dashboard-secret \
       --grant-types authorization_code,refresh_token,client_credentials,implicit \
       --response-types token,code,id_token \
-      --scope openid,offline,hydra.clients \
+      --scope openid,offline,hydra.clients,hydra.policies \
       --callbacks https://hydra-dashboard.herokuapp.com/callback
 }
 
