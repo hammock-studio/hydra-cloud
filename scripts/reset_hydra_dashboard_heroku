@@ -30,24 +30,24 @@ run_hydra_container () {
     -e SYSTEM_SECRET=$SYSTEM_SECRET \
     -e DATABASE_URL=$DATABASE_URL \
     -e OAUTH2_ISSUER_URL=https://$EXTERNAL_IP:9000/ \
-    -e OAUTH2_CONSENT_URL=https://hydra-consent-js-dev.herokuapp.com/consent \
-    -e OAUTH2_LOGIN_URL=https://hydra-consent-js-dev.herokuapp.com/login \
+    -e OAUTH2_CONSENT_URL=https://hydra-dashboard.herokuapp.com/consent \
+    -e OAUTH2_LOGIN_URL=https://hydra-dashboard.herokuapp.com/login \
     -e FORCE_ROOT_CLIENT_CREDENTIALS=admin:demo-password \
     oryd/hydra:v1.0.0-beta.5 serve
 }
 
-hydra_create_client_clients_app () {
+register_hydra_dashboard_client () {
   docker run --rm -it \
     -e HYDRA_URL=https://ory-hydra:4444 \
     --network hydranet \
     oryd/hydra:v1.0.0-beta.5 \
     clients create --skip-tls-verify \
-      --id clients-mgmt-app \
-      --secret clients-mgmt-app-secret \
+      --id hydra-dashboard \
+      --secret hydra-dashboard-secret \
       --grant-types authorization_code,refresh_token,client_credentials,implicit \
       --response-types token,code,id_token \
       --scope openid,offline,hydra.clients \
-      --callbacks https://hydra-consent-js-dev.herokuapp.com/callback
+      --callbacks https://hydra-dashboard.herokuapp.com/callback
 }
 
 # hydra_create_consent_policy () {
@@ -74,14 +74,12 @@ reset () {
   delete_containers
   run_postgres_container
   run_hydra_migrations
-  run_hydra_container
+  run_hydra_container # OAuth2.0 Server
 
   echo "waiting for hydra server ..."
   sleep 15
 
-  hydra_create_consent_client
-  hydra_create_consent_policy
-  hydra_create_dashboard_client
+  register_hydra_dashboard_client # OAuth2.0 Client Placeholder for hydra-dashboard
 }
 
 export DATABASE_URL=postgres://hydra:secret@ory-postgres:5432/hydra?sslmode=disable
