@@ -45,7 +45,7 @@ run_consent_app () {
     oryd/hydra-login-consent-node:v1.0.0-beta.5
 }
 
-hydra_create_consent_client () {
+register_client () {
   docker run --rm -it \
     -e HYDRA_URL=https://ory-hydra:4444 \
     --network hydranet \
@@ -77,16 +77,16 @@ reset () {
   delete_containers
   run_postgres_container
   run_hydra_migrations
-  run_hydra_container
+  run_hydra_container # OAuth2.0 Server
 
   sudo docker logs ory-hydra
 
   echo "waiting for hydra server ..."
   sleep 15
 
-  run_consent_app
-  hydra_create_consent_client
-  hydra_run_client_app
+  run_consent_app # Identity Provider
+  register_client
+  hydra_run_client_app # OAuth2.0 Client
 }
 
 export DATABASE_URL=postgres://hydra:secret@ory-postgres:5432/hydra?sslmode=disable
