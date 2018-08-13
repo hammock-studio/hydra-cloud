@@ -1,56 +1,55 @@
 #!/bin/sh
-# 
-# delete_containers () {
-#   docker stop ory-hydra ory-postgres
-#   docker rm ory-hydra ory-postgres
-# }
-#
-# run_postgres_container () {
-#   docker run \
-#     --network hydranet \
-#     --name ory-postgres \
-#     -e POSTGRES_USER=hydra \
-#     -e POSTGRES_PASSWORD=secret \
-#     -e POSTGRES_DB=hydra -p 5431:5432 \
-#     -d postgres:9.6
-# }
-#
-# run_hydra_migrations () {
-#   docker run \
-#     --network hydranet \
-#     -it --entrypoint \
-#     hydra oryd/hydra:v1.0.0-beta.5 \
-#     migrate sql $DATABASE_URL
-# }
-#
-# run_hydra_container () {
-#   docker run -d \
-#     --name ory-hydra \
-#     --network hydranet \
-#     -p 9000:4444 \
-#     -e SYSTEM_SECRET=$SYSTEM_SECRET \
-#     -e DATABASE_URL=$DATABASE_URL \
-#     -e OAUTH2_ISSUER_URL=https://localhost:9000/ \
-#     -e OAUTH2_CONSENT_URL=https://hydra-consent-js-dev.herokuapp.com/consent \
-#     -e OAUTH2_LOGIN_URL=https://hydra-consent-js-dev.herokuapp.com/login \
-#     -e FORCE_ROOT_CLIENT_CREDENTIALS=admin:demo-password \
-#     oryd/hydra:v1.0.0-beta.5 serve
-# }
-#
-# hydra_connect () {
-#   hydra connect --skip-tls-verify --id admin --secret demo-password --url https://localhost:9000
-# }
-#
-# hydra_create_consent_client () {
-#   hydra clients create --skip-tls-verify \
-#     --id consent-app-local \
-#     --secret consent-secret-local \
-#     --name "Consent App Client Local" \
-#     --grant-types client_credentials \
-#     --response-types token \
-#     --allowed-scopes hydra.keys.get,hydra.policies,hydra.clients,hydra.groups,hydra.health,hydra.warden
-# }
-#
+
+delete_containers () {
+  docker stop ory-hydra ory-postgres
+  docker rm ory-hydra ory-postgres
+}
+
+run_postgres_container () {
+  sudo docker run \
+    --network hydranet \
+    --name ory-postgres \
+    -e POSTGRES_USER=hydra \
+    -e POSTGRES_PASSWORD=secret \
+    -e POSTGRES_DB=hydra -p 5431:5432 \
+    -d postgres:9.6
+}
+
+run_hydra_migrations () {
+  sudo docker run -it --rm \
+    --network hydranet \
+    oryd/hydra:v1.0.0-beta.5 \
+    migrate sql $DATABASE_URL
+}
+
+run_hydra_container () {
+  sudo docker run -d \
+    --name ory-hydra \
+    --network hydranet \
+    -p 9000:4444 \
+    -e SYSTEM_SECRET=$SYSTEM_SECRET \
+    -e DATABASE_URL=$DATABASE_URL \
+    -e OAUTH2_ISSUER_URL=https://$EXTERNAL_IP:9000/ \
+    -e OAUTH2_CONSENT_URL=https://hydra-consent-js-dev.herokuapp.com/consent \
+    -e OAUTH2_LOGIN_URL=https://hydra-consent-js-dev.herokuapp.com/login \
+    -e FORCE_ROOT_CLIENT_CREDENTIALS=admin:demo-password \
+    oryd/hydra:v1.0.0-beta.5 serve
+}
+
+hydra_create_client_clients_app () {
+  docker run --rm -it \
+    -e HYDRA_URL=https://ory-hydra:4444 \
+    --network hydranet \
+    oryd/hydra:v1.0.0-beta.5 \
+    clients create --skip-tls-verify \
+      --id clients-mgmt-app \
+      --secret clients-mgmt-app-secret \
+      --grant-types authorization_code,refresh_token,client_credentials,implicit \
+      --response-types token,code,id_token \
+      --scope openid,offline,hydra.clients \
+      --callbacks https://hydra-consent-js-dev.herokuapp.com/callback
+}
+
 # hydra_create_consent_policy () {
 #   hydra policies create --skip-tls-verify \
 #     --actions get,create,update,delete \
@@ -59,39 +58,34 @@
 #     --resources "rn:hydra:keys:hydra.consent.<.*>","rn:hydra:policies:<.*>","rn:hydra:clients:<.*>","rn:hydra:groups:<.*>","rn:hydra:health:<.*>","rn:hydra:warden:<.*>" \
 #     --subjects consent-app-local
 # }
-#
+
 # hydra_create_dashboard_client () {
 #   hydra clients create --skip-tls-verify \
 #     --id dashboard-local \
 #     --secret dashboard-secret-local \
 #     -g authorization_code,refresh_token,client_credentials \
 #     -r token,code,id_token \
+# #       --scope hydra.keys.get,hydra.policies,hydra.clients,hydra.groups,hydra.health,hydra.warden \
 #     --allowed-scopes openid,offline,hydra.clients,hydra.policies \
 #     --callbacks http://localhost:3000/callback
 # }
-#
-# reset () {
-#   delete_containers
-#   run_postgres_container
-#   run_hydra_migrations
-#   run_hydra_container
-#
-#   echo "waiting for hydra server ..."
-#   sleep 15
-#
-#   hydra_connect
-#   hydra_create_consent_client
-#   hydra_create_consent_policy
-#   hydra_create_dashboard_client
-#   run_consent_server_container
-#
-#   echo "waiting for consent server ..."
-#   sleep 2
-#
-#   open http://localhost:3000
-# }
-#
-# export DATABASE_URL=postgres://hydra:secret@postgres:5432/hydra?sslmode=disable
-# export SYSTEM_SECRET=$(export LC_CTYPE=C; cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-#
-# reset
+
+reset () {
+  delete_containers
+  run_postgres_container
+  run_hydra_migrations
+  run_hydra_container
+
+  echo "waiting for hydra server ..."
+  sleep 15
+
+  hydra_create_consent_client
+  hydra_create_consent_policy
+  hydra_create_dashboard_client
+}
+
+export DATABASE_URL=postgres://hydra:secret@ory-postgres:5432/hydra?sslmode=disable
+export SYSTEM_SECRET=$(export LC_CTYPE=C; cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+export EXTERNAL_IP=$(curl ipinfo.io/ip)
+
+reset
