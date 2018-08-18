@@ -30,8 +30,8 @@ run_hydra_container () {
     -e SYSTEM_SECRET=$SYSTEM_SECRET \
     -e DATABASE_URL=$DATABASE_URL \
     -e OAUTH2_ISSUER_URL=https://$EXTERNAL_IP:9000/ \
-    -e OAUTH2_CONSENT_URL=https://hydra-dashboard.herokuapp.com/consent \
-    -e OAUTH2_LOGIN_URL=https://hydra-dashboard.herokuapp.com/login \
+    -e OAUTH2_CONSENT_URL=http://localhost:3000/consent \
+    -e OAUTH2_LOGIN_URL=http://localhost:3000/login \
     -e FORCE_ROOT_CLIENT_CREDENTIALS=admin:demo-password \
     oryd/hydra:v1.0.0-beta.5 serve
 }
@@ -46,29 +46,9 @@ register_hydra_dashboard_client () {
       --secret hydra-dashboard-secret \
       --grant-types authorization_code,refresh_token,client_credentials,implicit \
       --response-types token,code,id_token \
-      --scope openid,offline,hydra.clients,hydra.policies \
-      --callbacks https://hydra-dashboard.herokuapp.com/callback
+      --scope openid,offline,hydra.clients \
+      --callbacks http://localhost:3000/callback
 }
-
-# hydra_create_consent_policy () {
-#   hydra policies create --skip-tls-verify \
-#     --actions get,create,update,delete \
-#     --allow \
-#     --id consent-app-policy-local \
-#     --resources "rn:hydra:keys:hydra.consent.<.*>","rn:hydra:policies:<.*>","rn:hydra:clients:<.*>","rn:hydra:groups:<.*>","rn:hydra:health:<.*>","rn:hydra:warden:<.*>" \
-#     --subjects consent-app-local
-# }
-
-# hydra_create_dashboard_client () {
-#   hydra clients create --skip-tls-verify \
-#     --id dashboard-local \
-#     --secret dashboard-secret-local \
-#     -g authorization_code,refresh_token,client_credentials \
-#     -r token,code,id_token \
-# #       --scope hydra.keys.get,hydra.policies,hydra.clients,hydra.groups,hydra.health,hydra.warden \
-#     --allowed-scopes openid,offline,hydra.clients,hydra.policies \
-#     --callbacks http://localhost:3000/callback
-# }
 
 reset () {
   delete_containers
@@ -83,7 +63,7 @@ reset () {
 }
 
 export DATABASE_URL=postgres://hydra:secret@ory-postgres:5432/hydra?sslmode=disable
-export SYSTEM_SECRET=$(export LC_CTYPE=C; cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+export SYSTEM_SECRET=$(export LC_ALL=C; cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
 export EXTERNAL_IP=$(curl ipinfo.io/ip)
 
 reset
