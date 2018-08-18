@@ -1,0 +1,95 @@
+#!/bin/sh
+
+delete_containers () {
+  sudo docker stop ory-hydra ory-postgres ory-hydra-example--consent
+  sudo docker rm ory-hydra ory-postgres ory-hydra-example--consent
+}
+
+run_postgres_container () {
+  sudo docker run \
+    --network hydranet \
+    --name ory-postgres \
+    -e POSTGRES_USER=hydra \
+    -e POSTGRES_PASSWORD=secret \
+    -e POSTGRES_DB=hydra -p 5431:5432 \
+    -d postgres:9.6
+}
+
+run_hydra_migrations () {
+  sudo docker run -it --rm \
+    --network hydranet \
+    oryd/hydra:v1.0.0-beta.5 \
+    migrate sql $DATABASE_URL
+}
+
+run_hydra_container () {
+  sudo docker run -d \
+    --name ory-hydra \
+    --network hydranet \
+    -p 9000:4444 \
+    -e SYSTEM_SECRET=$SYSTEM_SECRET \
+    -e DATABASE_URL=$DATABASE_URL \
+    -e OAUTH2_ISSUER_URL=https://localhost:9000/ \
+    -e OAUTH2_CONSENT_URL=http://localhost:9020/consent \
+    -e OAUTH2_LOGIN_URL=http://localhost:9020/login \
+    oryd/hydra:v1.0.0-beta.5 serve
+}
+
+run_consent_app () {
+  docker run -d \
+    --name ory-hydra-example--consent \
+    -p 9020:3000 \
+    --network hydranet \
+    -e HYDRA_URL=https://ory-hydra:4444 \
+    -e NODE_TLS_REJECT_UNAUTHORIZED=0 \
+    oryd/hydra-login-consent-node:v1.0.0-beta.5
+}
+
+register_client () {
+  docker run --rm -it \
+    -e HYDRA_URL=https://ory-hydra:4444 \
+    --network hydranet \
+    oryd/hydra:v1.0.0-beta.5 \
+    clients create --skip-tls-verify \
+      --id facebook-photo-backup \
+      --secret some-secret \
+      --grant-types authorization_code,refresh_token,client_credentials,implicit \
+      --response-types token,code,id_token \
+      --scope openid,offline,photos.read \
+      --callbacks http://localhost:9010/callback,http://127.0.0.1:9010/callback
+}
+
+hydra_run_client_app () {
+  docker run --rm -it \
+    --network hydranet \
+    -p 9010:9010 \
+    oryd/hydra:v1.0.0-beta.5 \
+    token user --skip-tls-verify \
+      --port 9010 \
+      --auth-url https://localhost:9000/oauth2/auth \
+      --token-url https://ory-hydra:4444/oauth2/token \
+      --client-id facebook-photo-backup \
+      --client-secret some-secret \
+      --scope openid,offline,photos.read
+}
+
+reset () {
+  delete_containers
+  run_postgres_container
+  run_hydra_migrations
+  run_hydra_container # OAuth2.0 Server
+
+  sudo docker logs ory-hydra
+
+  echo "waiting for hydra server ..."
+  sleep 15
+
+  run_consent_app # Identity Provider
+  register_client
+  hydra_run_client_app # OAuth2.0 Client
+}
+
+export DATABASE_URL=postgres://hydra:secret@ory-postgres:5432/hydra?sslmode=disable
+export SYSTEM_SECRET=$(export LC_ALL=C; cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+
+reset
