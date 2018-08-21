@@ -27,12 +27,13 @@ run_hydra_container () {
     --name ory-hydra \
     --network hydranet \
     -p 9000:4444 \
+    -p 9001:4445 \
     -e SYSTEM_SECRET=$SYSTEM_SECRET \
     -e DATABASE_URL=$DATABASE_URL \
     -e OAUTH2_ISSUER_URL=https://localhost:9000/ \
     -e OAUTH2_CONSENT_URL=http://localhost:9020/consent \
     -e OAUTH2_LOGIN_URL=http://localhost:9020/login \
-    oryd/hydra:v1.0.0-beta.8 serve
+    oryd/hydra:v1.0.0-beta.8 serve all
 }
 
 run_consent_app () {
@@ -40,14 +41,14 @@ run_consent_app () {
     --name ory-hydra-example--consent \
     -p 9020:3000 \
     --network hydranet \
-    -e HYDRA_URL=https://ory-hydra:4444 \
+    -e HYDRA_URL=https://ory-hydra:4445 \
     -e NODE_TLS_REJECT_UNAUTHORIZED=0 \
     oryd/hydra-login-consent-node:v1.0.0-beta.8
 }
 
 register_client () {
   docker run --rm -it \
-    -e HYDRA_URL=https://ory-hydra:4444 \
+    -e HYDRA_ADMIN_URL=https://ory-hydra:4445 \
     --network hydranet \
     oryd/hydra:v1.0.0-beta.8 \
     clients create --skip-tls-verify \
