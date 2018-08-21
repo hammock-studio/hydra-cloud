@@ -18,7 +18,7 @@ run_postgres_container () {
 run_hydra_migrations () {
   sudo docker run -it --rm \
     --network hydranet \
-    oryd/hydra:v1.0.0-beta.5 \
+    oryd/hydra:v1.0.0-beta.8 \
     migrate sql $DATABASE_URL
 }
 
@@ -32,7 +32,7 @@ run_hydra_container () {
     -e OAUTH2_ISSUER_URL=https://localhost:9000/ \
     -e OAUTH2_CONSENT_URL=http://localhost:9020/consent \
     -e OAUTH2_LOGIN_URL=http://localhost:9020/login \
-    oryd/hydra:v1.0.0-beta.5 serve
+    oryd/hydra:v1.0.0-beta.8 serve
 }
 
 run_consent_app () {
@@ -42,14 +42,14 @@ run_consent_app () {
     --network hydranet \
     -e HYDRA_URL=https://ory-hydra:4444 \
     -e NODE_TLS_REJECT_UNAUTHORIZED=0 \
-    oryd/hydra-login-consent-node:v1.0.0-beta.5
+    oryd/hydra-login-consent-node:v1.0.0-beta.8
 }
 
 register_client () {
   docker run --rm -it \
     -e HYDRA_URL=https://ory-hydra:4444 \
     --network hydranet \
-    oryd/hydra:v1.0.0-beta.5 \
+    oryd/hydra:v1.0.0-beta.8 \
     clients create --skip-tls-verify \
       --id facebook-photo-backup \
       --secret some-secret \
@@ -63,7 +63,7 @@ hydra_run_client_app () {
   docker run --rm -it \
     --network hydranet \
     -p 9010:9010 \
-    oryd/hydra:v1.0.0-beta.5 \
+    oryd/hydra:v1.0.0-beta.8 \
     token user --skip-tls-verify \
       --port 9010 \
       --auth-url https://localhost:9000/oauth2/auth \
